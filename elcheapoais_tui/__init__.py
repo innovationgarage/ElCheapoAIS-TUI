@@ -3,6 +3,8 @@
 import sys
 import os
 import serial
+import threading
+import datetime
 
 SCREENW=32
 SCREENH=9
@@ -105,22 +107,81 @@ class DisplayScreen(object):
 class MainScreen(DisplayScreen):
     def __init__(self):
         s = empty_screen
-        s = strw(s, 1, 1, "MMSI: 257098740")
-        s = strw(s, 1, 2, "IP: 192.168.4.36")
-        s = strw(s, 1, 3, "Lat: 69.65143")
-        s = strw(s, 1, 4, "Lon: 18.96868")
-        s = strw(s, 1, 5, "Last msg: 2019-10-02 15:17:01")
+        s = strw(s, 1, 1, "MMSI:")
+        s = strw(s, 1, 2, "IP:")
+        s = strw(s, 1, 3, "Lat:")
+        s = strw(s, 1, 4, "Lon:")
+        s = strw(s, 1, 5, "Last pos:")
 
         s = strw(s, 1, SCREENH, "CFG")
         s = strw(s, SCREENW//2-1, SCREENH, "EXT")    
         s = strw(s, SCREENW-2, SCREENH, "DBG")
 
-        s = strw(s, SCREENW-1, 1, "UP")
-        s = strw(s, SCREENW-1, 2, "UP")
+        self.nmea = False
+        self.net = False
+        self.ip = "192.168.4.36"
+        self.mmsi = "257098740"
+        self.lat = 4.12345
+        self.lon = 40.33218
+        self.time = datetime.datetime.now()
+        
         DisplayScreen.__init__(self, s)
 
     def run(self):
         return getattr(self, "action_%s" % DisplayScreen.run(self))()
+
+    def display(self):
+        DisplayScreen.display(self)
+        self.set_nmea(self.nmea)
+        self.set_net(self.net)
+        self.set_mmsi(self.mmsi)
+        self.set_ip(self.ip)
+        self.set_latlon(self.lat, self.lon, self.time)
+        
+    def set_nmea(self, up):
+        self.nmea = up
+        if up:
+            wr(b"\x1b[1;%sH" % (str(SCREENW-3).encode("utf-8"),) + b"  UP")
+        else:
+            wr(b"\x1b[1;%sH" % (str(SCREENW-3).encode("utf-8"),) + b"DOWN")
+
+    def set_net(self, up):
+        self.net = up
+        if up:
+            wr(b"\x1b[2;%sH" % (str(SCREENW-3).encode("utf-8"),) + b"  UP")
+        else:
+            wr(b"\x1b[2;%sH" % (str(SCREENW-3).encode("utf-8"),) + b"DOWN")
+            
+    def set_mmsi(self, mmsi):
+        self.mmsi = mmsi
+        wr(b"\x1b[1;7H" + b" " * 9)
+        wr(b"\x1b[1;7H" + mmsi.encode("utf-8"))
+
+    def set_ip(self, ip):
+        self.ip = ip
+        wr(b"\x1b[2;5H" + b" " * 15)
+        wr(b"\x1b[2;5H" + ip.encode("utf-8"))
+
+    def set_latlon(self, lat, lon, time=None):
+        self.lat = lat
+        self.lon = lon
+        wr(b"\x1b[3;6H" + b" " * (SCREENW-6))
+        if lat is not None:
+            wr(b"\x1b[3;6H" + str(lat).encode("utf-8"))
+        wr(b"\x1b[4;6H" + b" " * (SCREENW-6))
+        if lon is not None:
+            wr(b"\x1b[4;6H" + str(lon).encode("utf-8"))
+        wr(b"\x1b[5;11H" + b" " * (SCREENW-11))
+        if lat is not None and lon is not None:
+            self.set_nmea(True)
+            if time is None:
+                time = datetime.datetime.now()
+            self.time = time
+            time = time.strftime("%Y-%m-%d %H:%M:%S")
+            wr(b"\x1b[5;11H" + time.encode("utf-8"))
+        else:
+            self.set_nmea(False)
+            wr(b"\x1b[5;11HNo positions received")
 
     def action_0(self):
         return config_screen
@@ -171,8 +232,19 @@ class DebugMenu(Menu):
 main_screen = MainScreen()
 config_screen = ConfigMenu()
 debug_screen = DebugMenu()
+current = main_screen
 
+class Screen(threading.Thread):
+    def run(self):
+        global current
+        while current:
+            current = current.run()
+
+class Status(threading.Thread):
+    def run(self):
+        for line in sys.stdin:
+            eval(line)
+            
 def main():
-    current = main_screen
-    while current:
-        current = current.run()
+    Status().start()
+    Screen().start()
