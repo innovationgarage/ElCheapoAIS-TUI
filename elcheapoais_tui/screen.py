@@ -27,11 +27,11 @@ class Menu(object):
         return self.handle_input()
         
     def display(self):
-        wr(b"\x1bc")
-        wr(b"*" * SCREENW)
+        wr(b"\x1bc\x1b[2J")
+        wr(b"*" * SCREENW + b"\r\n")
         for entry in self.entries:
-            wr(b"*" + (b" " * (SCREENW-2)) + b"*")
-        wr(b"*" * SCREENW)
+            wr(b"*" + (b" " * (SCREENW-2)) + b"*" + b"\r\n")
+        wr(b"*" * SCREENW + b"\r\n")
         for idx, entry in enumerate(self.entries):
             wr(b"\x1b[%s;3H%s" % (str(idx + 2).encode("utf-8"), entry.encode("utf-8")))
 
@@ -68,14 +68,19 @@ class Menu(object):
 class DisplayScreen(object):
     def __init__(self, content):
         self.content = content
+        self.displaying = False
 
     def run(self):
-        self.display()
-        return self.handle_input()
+        try:
+            self.displaying = True
+            self.display()
+            return self.handle_input()
+        finally:
+            self.displaying = False
         
     def display(self):
-        wr(b"\x1bc")
-        wr(self.content.encode("utf-8"))
+        wr(b"\x1bc\x1b[2J")
+        wr(self.content.replace("\n", "\r\n").encode("utf-8"))
             
     def handle_input(self):
         while True:

@@ -55,48 +55,49 @@ class MainScreen(screen.DisplayScreen):
         
     def set_nmea(self, up):
         self.nmea = up
-        if up:
-            screen.wr(b"\x1b[1;%sH" % (str(screen.SCREENW-3).encode("utf-8"),) + b"  UP")
-        else:
-            screen.wr(b"\x1b[1;%sH" % (str(screen.SCREENW-3).encode("utf-8"),) + b"DOWN")
-
+        if self.displaying:
+            screen.wr(b"\x1b[1;%sH" % (str(screen.SCREENW-3).encode("utf-8"),) + (b"  UP" if up else b"DOWN"))
+                
     def set_net(self, up):
         self.net = up
-        if up:
-            screen.wr(b"\x1b[2;%sH" % (str(screen.SCREENW-3).encode("utf-8"),) + b"  UP")
-        else:
-            screen.wr(b"\x1b[2;%sH" % (str(screen.SCREENW-3).encode("utf-8"),) + b"DOWN")
+        if self.displaying:
+            screen.wr(b"\x1b[2;%sH" % (str(screen.SCREENW-3).encode("utf-8"),) + (b"  UP" if up else b"DOWN"))
             
     def set_mmsi(self, mmsi):
         self.mmsi = mmsi
-        screen.wr(b"\x1b[1;7H" + b" " * 9)
-        screen.wr(b"\x1b[1;7H" + mmsi.encode("utf-8"))
+        if self.displaying:
+            screen.wr(b"\x1b[1;7H" + b" " * 9)
+            screen.wr(b"\x1b[1;7H" + mmsi.encode("utf-8"))
 
     def set_ip(self, ip):
         self.ip = ip
-        screen.wr(b"\x1b[2;5H" + b" " * 15)
-        screen.wr(b"\x1b[2;5H" + ip.encode("utf-8"))
+        if self.displaying:
+            screen.wr(b"\x1b[2;5H" + b" " * 15)
+            screen.wr(b"\x1b[2;5H" + ip.encode("utf-8"))
 
     def set_latlon(self, lat, lon, time=None):
         self.lat = lat
         self.lon = lon
-        screen.wr(b"\x1b[3;6H" + b" " * (screen.SCREENW-6))
-        if lat is not None:
-            screen.wr(b"\x1b[3;6H" + str(lat).encode("utf-8"))
-        screen.wr(b"\x1b[4;6H" + b" " * (screen.SCREENW-6))
-        if lon is not None:
-            screen.wr(b"\x1b[4;6H" + str(lon).encode("utf-8"))
-        screen.wr(b"\x1b[5;11H" + b" " * (screen.SCREENW-11))
         if lat is not None and lon is not None:
             self.set_nmea(True)
             if time is None:
                 time = datetime.datetime.now()
             self.time = time
-            time = time.strftime("%Y-%m-%d %H:%M:%S")
-            screen.wr(b"\x1b[5;11H" + time.encode("utf-8"))
         else:
             self.set_nmea(False)
-            screen.wr(b"\x1b[5;11HNo positions received")
+        if self.displaying:
+            screen.wr(b"\x1b[3;6H" + b" " * (screen.SCREENW-6))
+            if lat is not None:
+                screen.wr(b"\x1b[3;6H" + str(lat).encode("utf-8"))
+            screen.wr(b"\x1b[4;6H" + b" " * (screen.SCREENW-6))
+            if lon is not None:
+                screen.wr(b"\x1b[4;6H" + str(lon).encode("utf-8"))
+            screen.wr(b"\x1b[5;11H" + b" " * (screen.SCREENW-11))
+            if lat is not None and lon is not None:
+                time = self.time.strftime("%Y-%m-%d %H:%M:%S")
+                screen.wr(b"\x1b[5;11H" + time.encode("utf-8"))
+            else:
+                screen.wr(b"\x1b[5;11HNo positions received")
 
     def action_0(self):
         return config_screen
