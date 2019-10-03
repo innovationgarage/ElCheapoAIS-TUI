@@ -6,6 +6,8 @@ import serial
 import threading
 import datetime
 from . import screen
+from . import monitor_ip
+import time
 
 def dbg(s):
     sys.stderr.write(s + "\n")
@@ -157,7 +159,18 @@ class Status(threading.Thread):
     def run(self):
         for line in sys.stdin:
             eval(line)
-            
+
+class IpStatus(threading.Thread):
+    def run(self):
+        while True:
+            current_ip = None
+            for ip in monitor_ip.get_ips():
+                if ip != '127.0.0.1':
+                    current_ip = ip
+            main_screen.set_ip(current_ip)
+            time.sleep(1)
+        
 def main():
-    Status().start()
     Screen().start()
+    Status().start()
+    IpStatus().start()
