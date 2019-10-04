@@ -69,9 +69,7 @@ class MainScreen(screen.DisplayScreen):
     def set_ip(self, ip):
         self.ip = ip
         if self.displaying:
-            screen.wr(b"\x1b[2;5H" + b" " * 15)
-            if ip is not None:
-                screen.wr(b"\x1b[2;5H" + ip.encode("utf-8"))
+            screen.wr(b"\x1b[2;5H" + strw(" " * 15, 1, 1, (ip or "")).encode("utf-8"))
 
     def set_latlon(self, lat, lon, time=None):
         self.lat = lat
@@ -84,18 +82,12 @@ class MainScreen(screen.DisplayScreen):
         else:
             self.set_nmea(False)
         if self.displaying:
-            screen.wr(b"\x1b[3;6H" + b" " * (screen.SCREENW-6))
-            if lat is not None:
-                screen.wr(b"\x1b[3;6H" + str(lat).encode("utf-8"))
-            screen.wr(b"\x1b[4;6H" + b" " * (screen.SCREENW-6))
-            if lon is not None:
-                screen.wr(b"\x1b[4;6H" + str(lon).encode("utf-8"))
-            screen.wr(b"\x1b[5;11H" + b" " * (screen.SCREENW-11))
-            if lat is not None and lon is not None:
-                time = self.time.strftime("%Y-%m-%d %H:%M:%S")
-                screen.wr(b"\x1b[5;11H" + time.encode("utf-8"))
-            else:
-                screen.wr(b"\x1b[5;11HNo positions received")
+            screen.wr(b"\x1b[3;6H" + strw(" " * (screen.SCREENW-6), 1, 1, str(lat) if lat is not None else "").encode("utf-8"))
+            screen.wr(b"\x1b[4;6H" + strw(" " * (screen.SCREENW-6), 1, 1, str(lon) if lon is not None else "").encode("utf-8"))
+            screen.wr(b"\x1b[5;11H" + strw(" " * (screen.SCREENW-11), 1, 1,
+                                           self.time.strftime("%Y-%m-%d %H:%M:%S")
+                                           if lat is not None and lon is not None
+                                           else b"No positions received").encode("utf-8"))
 
     def action_0(self):
         return config_screen
@@ -140,14 +132,23 @@ class DebugMenu(screen.Menu):
 class CatScreen(screen.DisplayScreen):
     def __init__(self):
         s = screen.empty_screen
-        cat = r"""              _ |\_
-              \` ..\
-         __,.-" =__Y=
-       ."        )
- _    /   ,    \/\_
-((____|    )_-\ \_-`
-`-----'`-----` `--`
+        cat = r"""       _..---..,""-._     ,/}/)
+    .''       ,      ``..'(/-<
+   /   _     {      )         \
+  ;   _ `.    `.   <         a(
+ /   ( \  )     `.  \ __.._ .: y
+( <\_-) )'-.___...\  `._   //-'
+ \ `-' /-._))      `-._)))
+  `...'
 """
+#         cat = r"""              _ |\_
+#               \` ..\
+#          __,.-" =__Y=
+#        ."        )
+#  _    /   ,    \/\_
+# ((____|    )_-\ \_-`
+# `-----'`-----` `--`
+# """
         for idx, line in enumerate(cat.split("\n")):
             s = strw(s, 1, idx+1, line)
         
