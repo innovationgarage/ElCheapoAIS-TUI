@@ -24,7 +24,12 @@ class Menu(object):
 
     def run(self):
         self.display()
-        return self.handle_input()
+        res = self.handle_input()
+        action = "action_%s" % res
+        if hasattr(self, action):
+            return getattr(self, action)()
+        else:
+            return res
         
     def display(self):
         wr(b"\x1bc\x1b[2J")
@@ -74,9 +79,14 @@ class DisplayScreen(object):
         try:
             self.displaying = True
             self.display()
-            return self.handle_input()
+            res = self.handle_input()
         finally:
             self.displaying = False
+        action = "action_%s" % res
+        if hasattr(self, action):
+            return getattr(self, action)()
+        else:
+            return res
         
     def display(self):
         wr(b"\x1bc\x1b[2J")

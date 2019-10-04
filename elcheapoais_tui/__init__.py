@@ -29,7 +29,7 @@ class MainScreen(screen.DisplayScreen):
         s = strw(s, 1, 5, "Last pos:")
 
         s = strw(s, 1, screen.SCREENH, "CFG")
-        s = strw(s, screen.SCREENW//2-1, screen.SCREENH, "EXT")    
+        s = strw(s, screen.SCREENW//2-1, screen.SCREENH, "CAT")    
         s = strw(s, screen.SCREENW-2, screen.SCREENH, "DBG")
 
         self.nmea = False
@@ -41,9 +41,6 @@ class MainScreen(screen.DisplayScreen):
         self.time = datetime.datetime.now()
         
         screen.DisplayScreen.__init__(self, s)
-
-    def run(self):
-        return getattr(self, "action_%s" % screen.DisplayScreen.run(self))()
 
     def display(self):
         screen.DisplayScreen.display(self)
@@ -103,7 +100,7 @@ class MainScreen(screen.DisplayScreen):
     def action_0(self):
         return config_screen
     def action_1(self):
-        sys.exit(1)
+        return cat_screen
     def action_2(self):
         return debug_screen
     
@@ -115,9 +112,6 @@ class ConfigMenu(screen.Menu):
             "Msgs/min/mmsi: 10",
         ])
         
-    def run(self):
-        return getattr(self, "action_%s" % screen.Menu.run(self))()
-
     def action_0(self):
         return main_screen
     def action_1(self):
@@ -134,9 +128,6 @@ class DebugMenu(screen.Menu):
             "Filesystem status"
         ])
         
-    def run(self):
-        return getattr(self, "action_%s" % screen.Menu.run(self))()
-
     def action_0(self):
         return main_screen
     def action_1(self):
@@ -145,10 +136,35 @@ class DebugMenu(screen.Menu):
         return main_screen
     def action_3(self):
         return main_screen
+
+class CatScreen(screen.DisplayScreen):
+    def __init__(self):
+        s = screen.empty_screen
+        cat = r"""              _ |\_
+              \` ..\
+         __,.-" =__Y=
+       ."        )
+ _    /   ,    \/\_
+((____|    )_-\ \_-`
+`-----'`-----` `--`
+"""
+        for idx, line in enumerate(cat.split("\n")):
+            s = strw(s, 1, idx+1, line)
+        
+        screen.DisplayScreen.__init__(self, s)
+
+    def action_0(self):
+        return main_screen
+    def action_1(self):
+        return main_screen
+    def action_2(self):
+        return main_screen
+
     
 main_screen = MainScreen()
 config_screen = ConfigMenu()
 debug_screen = DebugMenu()
+cat_screen = CatScreen()
 current = main_screen
 
 class Screen(threading.Thread):
@@ -156,6 +172,7 @@ class Screen(threading.Thread):
         global current
         while current:
             current = current.run()
+            print("XXXXXXXXXXXXX", current)
 
 class Status(threading.Thread):
     def run(self):
