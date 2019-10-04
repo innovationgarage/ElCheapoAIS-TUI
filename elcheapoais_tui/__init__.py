@@ -8,6 +8,9 @@ import datetime
 from . import screen
 from . import monitor_ip
 import time
+import subprocess
+import time
+import re
 
 def dbg(s):
     sys.stderr.write(s + "\n")
@@ -107,9 +110,9 @@ class ConfigMenu(screen.Menu):
     def action_0(self):
         return main_screen
     def action_1(self):
-        return main_screen
+        return msgs_min_screen
     def action_2(self):
-        return main_screen
+        return msgs_min_mmsi_screen
 
 class DebugMenu(screen.Menu):
     def __init__(self):
@@ -123,7 +126,7 @@ class DebugMenu(screen.Menu):
     def action_0(self):
         return main_screen
     def action_1(self):
-        return main_screen
+        return ping_screen
     def action_2(self):
         return main_screen
     def action_3(self):
@@ -161,12 +164,77 @@ class CatScreen(screen.DisplayScreen):
     def action_2(self):
         return main_screen
 
+class MsgsMinScreen(screen.Dial):
+    def __init__(self):
+        screen.Dial.__init__(self, "Messages/minute total: ", 100)
+
+    def action(self, value):
+        return config_screen
     
+class MsgsMinMmsiScreen(screen.Dial):
+    def __init__(self):
+        screen.Dial.__init__(self, "Messages/minute/mmsi: ", 10)
+
+    def action(self, value):
+        return config_screen
+
+class PingScreen(screen.TextEntry):
+    def __init__(self):
+        screen.TextEntry.__init__(self, "IP/domain to ping:\n")
+
+    def action(self, value):
+        pinging_screen.ip = value
+        return pinging_screen
+    
+class PingingThread(threading.Thread):
+    def __init__(self, ip):
+        self.ip = ip
+        self.do_quit = False
+        self.quit_done = False
+        threading.Thread.__init__(self)
+    def quit(self):
+        self.do_quit = True
+        self.proc.kill()
+    def run(self):
+        self.proc = subprocess.Popen(["ping", self.ip], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        while not self.do_quit:
+            line = self.proc.stdout.readline()
+            line = re.sub(rb"PING ([^ ]*) \([^ ]*\) ([^ ]*) .*", rb"ip \1 \2B", line)
+            line = re.sub(rb"([^ ]*) bytes from ([^:]*): icmp_seq=([^ ]*) ttl=([^ ]*) time=([^ ]*) ms", rb"\1B sq=\3 ttl=\4 \5ms", line)
+            if not self.do_quit:
+                screen.wr(line.replace(b"\n", b"\r\n"))
+
+class PingingScreen(screen.DisplayScreen):
+    def __init__(self):
+        self.ip = ""
+        screen.DisplayScreen.__init__(self, "")
+
+    def display(self):
+        self.content = "Pinging: %s\n" % self.ip
+        screen.DisplayScreen.display(self)
+        self.thread = PingingThread(self.ip)
+        self.thread.start()
+    def action_0(self):
+        self.thread.quit()
+        return main_screen
+    def action_1(self):
+        self.thread.quit()
+        return main_screen
+    def action_2(self):
+        self.thread.quit()
+        return main_screen
+
 main_screen = MainScreen()
 config_screen = ConfigMenu()
 debug_screen = DebugMenu()
 cat_screen = CatScreen()
+msgs_min_screen = MsgsMinScreen()
+msgs_min_mmsi_screen = MsgsMinMmsiScreen()
+ping_screen = PingScreen()
+pinging_screen = PingingScreen()
+
 current = main_screen
+
 
 class Screen(threading.Thread):
     def run(self):

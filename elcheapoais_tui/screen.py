@@ -107,3 +107,98 @@ class DisplayScreen(object):
             elif c1 == b"\n" or c1 == b"\r":
                 return 1
         return self.pos
+
+class Dial(object):
+    def __init__(self, label, value, inc=1):
+        self.y = len(label.split("\n"))
+        self.x = len(label.split("\n")[-1]) + 1
+        self.label = label.replace("\n", "\r\n").encode("utf-8")
+        self.value = value
+        self.len = 0
+        self.inc = inc
+    
+    def run(self):
+        try:
+            self.displaying = True
+            self.display()
+            self.handle_input()
+        finally:
+            self.displaying = False
+        if hasattr(self, "action"):
+            return self.action(self.value)
+        else:
+            return self.value
+            
+    def display(self):
+        wr(b"\x1bc\x1b[2J")
+        wr(self.label)
+        self.set_value(self.value)
+
+    def set_value(self, value):
+        self.value = value
+        if self.displaying:
+            wr(b"\x1b[%s;%sH" % (str(self.y).encode("utf-8"), str(self.x).encode("utf-8")))
+            s = str(self.value)
+            pad = " " * (max(self.len - len(s), 0))
+            self.len = len(s)
+            wr((s+pad).encode("utf-8"))
+            
+    def handle_input(self):
+        while True:
+            c1 = rd()
+            if c1 == b"\x1b":
+                c2 = rd()
+                if c2 == b"[":
+                    while True:
+                        c3 = rd()
+                        if c3 == b"A":
+                            self.set_value(self.value + self.inc)
+                            break
+                        elif c3 == b"B":
+                            self.set_value(self.value - self.inc)
+                            break
+            elif c1 == b"\n" or c1 == b"\r":
+                return
+
+class TextEntry(object):
+    def __init__(self, label, value=""):
+        self.y = len(label.split("\n"))
+        self.x = len(label.split("\n")[-1]) + 1
+        self.label = label.replace("\n", "\r\n").encode("utf-8")
+        self.value = value
+    
+    def run(self):
+        try:
+            self.displaying = True
+            self.display()
+            self.handle_input()
+        finally:
+            self.displaying = False
+        if hasattr(self, "action"):
+            return self.action(self.value)
+        else:
+            return self.value
+            
+    def display(self):
+        wr(b"\x1bc\x1b[2J")
+        wr(self.label)
+        self.set_value(self.value)
+
+    def set_value(self, value):
+        self.value = value
+        if self.displaying:
+            wr(b"\x1b[%s;%sH" % (str(self.y).encode("utf-8"), str(self.x).encode("utf-8")))
+            wr(self.value.encode("utf-8"))
+            
+    def handle_input(self):
+        while True:
+            c1 = rd()
+            if c1 == b"\n" or c1 == b"\r":
+                return
+            elif c1 == b"\b":
+                self.value = self.value[:-1]
+                wr(b"\x1b[%s;%sH " % (str(self.y).encode("utf-8"), str(self.x + len(self.value)).encode("utf-8")))
+            else:
+                self.value = self.value + c1.decode("utf-8")
+                wr(b"\x1b[%s;%sH%s" % (str(self.y).encode("utf-8"), str(self.x + len(self.value) - 1).encode("utf-8"), c1))
+
