@@ -180,7 +180,7 @@ class MsgsMinMmsiScreen(screen.Dial):
 
 class PingScreen(screen.TextEntry):
     def __init__(self):
-        screen.TextEntry.__init__(self, "IP/domain to ping:\n")
+        screen.TextEntry.__init__(self, "IP/domain to ping:\n", value="8.8.8.8")
 
     def action(self, value):
         pinging_screen.ip = value
