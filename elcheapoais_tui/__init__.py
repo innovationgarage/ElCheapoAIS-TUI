@@ -119,6 +119,7 @@ class DebugMenu(screen.Menu):
         screen.Menu.__init__(self, [
             "Back",
             "Ping server",
+            "Show syslog",
             "Show last msg",
             "Filesystem status"
         ])
@@ -128,8 +129,10 @@ class DebugMenu(screen.Menu):
     def action_1(self):
         return ping_screen
     def action_2(self):
-        return main_screen
+        return syslog_screen
     def action_3(self):
+        return main_screen
+    def action_4(self):
         return main_screen
 
 class CatScreen(screen.DisplayScreen):
@@ -216,14 +219,24 @@ class PingingScreen(screen.DisplayScreen):
         self.thread.start()
     def action_0(self):
         self.thread.quit()
-        return main_screen
+        return debug_screen
     def action_1(self):
         self.thread.quit()
-        return main_screen
+        return debug_screen
     def action_2(self):
         self.thread.quit()
-        return main_screen
+        return debug_screen
 
+class SyslogScreen(screen.TextScroll):
+    def __init__(self):
+        with open("/var/log/syslog") as f:
+            content = f.read()
+        content = content.replace(": ", ":\n")
+        screen.TextScroll.__init__(self, content)
+
+    def action(self):
+        return debug_screen
+    
 main_screen = MainScreen()
 config_screen = ConfigMenu()
 debug_screen = DebugMenu()
@@ -232,6 +245,7 @@ msgs_min_screen = MsgsMinScreen()
 msgs_min_mmsi_screen = MsgsMinMmsiScreen()
 ping_screen = PingScreen()
 pinging_screen = PingingScreen()
+syslog_screen = SyslogScreen()
 
 current = main_screen
 

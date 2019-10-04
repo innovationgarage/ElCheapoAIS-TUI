@@ -202,3 +202,46 @@ class TextEntry(object):
                 self.value = self.value + c1.decode("utf-8")
                 wr(b"\x1b[%s;%sH%s" % (str(self.y).encode("utf-8"), str(self.x + len(self.value) - 1).encode("utf-8"), c1))
 
+
+class TextScroll(object):
+    def __init__(self, content):
+        self.content = []
+        for line in content.split("\n"):
+            while line:
+                self.content.append(line[:SCREENW])
+                line = line[SCREENW:]
+        self.pos = 0
+    
+    def run(self):
+        self.display()
+        self.handle_input()
+        if hasattr(self, "action"):
+            return self.action()
+        else:
+            return True
+            
+    def display(self):
+        wr(b"\x1bc\x1b[2J")
+        lines = self.content[self.pos:self.pos + SCREENH]
+        for line in lines:
+            wr(line.encode("utf-8") + b"\r\n")
+
+    def handle_input(self):
+        while True:
+            c1 = rd()
+            if c1 == b"\x1b":
+                c2 = rd()
+                if c2 == b"[":
+                    while True:
+                        c3 = rd()
+                        if c3 == b"A":
+                            self.display()
+                            self.pos = max(self.pos - 1, 0)
+                            break
+                        elif c3 == b"B":
+                            self.pos = min(self.pos + 1, len(self.content) - SCREENH)
+                            self.display()
+                            break
+            elif c1 == b"\n" or c1 == b"\r":
+                return
+
