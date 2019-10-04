@@ -73,7 +73,8 @@ class MainScreen(screen.DisplayScreen):
         self.ip = ip
         if self.displaying:
             screen.wr(b"\x1b[2;5H" + b" " * 15)
-            screen.wr(b"\x1b[2;5H" + ip.encode("utf-8"))
+            if ip is not None:
+                screen.wr(b"\x1b[2;5H" + ip.encode("utf-8"))
 
     def set_latlon(self, lat, lon, time=None):
         self.lat = lat
