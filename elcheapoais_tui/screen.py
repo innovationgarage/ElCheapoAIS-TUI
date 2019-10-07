@@ -13,7 +13,7 @@ empty_screen = "\n".join([" " * SCREENW] * SCREENH)
 
 def sopen():
     global term
-    term = serial.Serial(os.environ.get("TTGOTERM", "/dev/ttyUSB0"), baudrate=int(os.environ.get("TTGOTERM_SPEED", 9600)), timeout=3.0)
+    term = serial.Serial(os.environ.get("TTGOTERM", "/dev/ttyUSB0"), baudrate=int(os.environ.get("TTGOTERM_SPEED", 115200)), timeout=3.0)
 
 sopen()
 
