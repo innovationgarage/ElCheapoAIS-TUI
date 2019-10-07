@@ -120,6 +120,7 @@ class DebugMenu(screen.Menu):
             "Back",
             "Ping server",
             "Show syslog",
+            "Shell",
             "Show last msg",
             "Filesystem status"
         ])
@@ -131,8 +132,10 @@ class DebugMenu(screen.Menu):
     def action_2(self):
         return syslog_screen
     def action_3(self):
-        return main_screen
+        return shell_screen
     def action_4(self):
+        return main_screen
+    def action_5(self):
         return main_screen
 
 class CatScreen(screen.DisplayScreen):
@@ -236,6 +239,13 @@ class SyslogScreen(screen.TextScroll):
 
     def action(self):
         return debug_screen
+
+class ShellScreen(object):
+    def __init__(self):
+        pass
+    def run(self):
+        subprocess.run("/bin/bash", stdin=screen.term.fileno(), stdout=screen.term.fileno(), stderr=screen.term.fileno())
+        return debug_screen
     
 main_screen = MainScreen()
 config_screen = ConfigMenu()
@@ -246,6 +256,7 @@ msgs_min_mmsi_screen = MsgsMinMmsiScreen()
 ping_screen = PingScreen()
 pinging_screen = PingingScreen()
 syslog_screen = SyslogScreen()
+shell_screen = ShellScreen()
 
 current = main_screen
 
