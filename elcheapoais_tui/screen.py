@@ -11,12 +11,35 @@ SCREENH=9
 empty_screen = "\n".join([" " * SCREENW] * SCREENH)
 
 
-term = serial.Serial(os.environ.get("TTGOTERM", "/dev/ttyUSB0"), baudrate=int(os.environ.get("TTGOTERM_SPEED", 9600)), timeout=3.0)
+def sopen():
+    global term
+    term = serial.Serial(os.environ.get("TTGOTERM", "/dev/ttyUSB0"), baudrate=int(os.environ.get("TTGOTERM_SPEED", 9600)), timeout=3.0)
+
+sopen()
 
 def rd():
-    return term.read(1)
+    while True:
+        try:
+            return term.read(1)
+        except Exception as e:
+            print(e)
+            time.sleep(0.1)
+            try:
+                sopen()
+            except:
+                pass
+
 def wr(s):
-    term.write(s)
+    while True:
+        try:
+            return term.write(s)
+        except Exception as e:
+            print(e)
+            time.sleep(0.1)
+            try:
+                sopen()
+            except:
+                pass
     
 class Menu(object):
     def __init__(self, entries):
