@@ -46,6 +46,7 @@ class Screen(object):
     def __init__(self, **properties):
         self.writegroup = threading.RLock()
         self.properties = properties
+        self.displaying = False
         
     def wr(self, s):
         if self.displaying:
@@ -156,27 +157,23 @@ class DisplayScreen(Screen):
 
 class Dial(Screen):
     def __init__(self, label, value, inc=1, **properties):
-        Screen.__init__(self, **properties)
+        Screen.__init__(self, value=value, **properties)
         self.y = len(label.split("\n"))
         self.x = len(label.split("\n")[-1]) + 1
         self.label = label.replace("\n", "\r\n").encode("utf-8")
-        self.value = value
         self.len = 0
         self.inc = inc
     
     def display(self):
         self.wr(b"\x1bc\x1b[2J")
         self.wr(self.label)
-        self.set_value(self.value)
 
-    def set_value(self, value):
-        self.value = value
-        if self.displaying:
-            self.wr(b"\x1b[%s;%sH" % (str(self.y).encode("utf-8"), str(self.x).encode("utf-8")))
-            s = str(self.value)
-            pad = " " * (max(self.len - len(s), 0))
-            self.len = len(s)
-            self.wr((s+pad).encode("utf-8"))
+    def display_value(self, value):
+        self.wr(b"\x1b[%s;%sH" % (str(self.y).encode("utf-8"), str(self.x).encode("utf-8")))
+        s = str(value)
+        pad = " " * (max(self.len - len(s), 0))
+        self.len = len(s)
+        self.wr((s+pad).encode("utf-8"))
             
     def handle_input(self):
         while True:
@@ -187,13 +184,13 @@ class Dial(Screen):
                     while True:
                         c3 = rd()
                         if c3 == b"A":
-                            self.set_value(self.value + self.inc)
+                            self["value"] = self["value"] + self.inc
                             break
                         elif c3 == b"B":
-                            self.set_value(self.value - self.inc)
+                            self["value"] = self["value"] - self.inc
                             break
             elif c1 == b"\n" or c1 == b"\r":
-                return self.value
+                return self["value"]
 
 class TextEntry(Screen):
     def __init__(self, label, value="", **properties):
