@@ -11,6 +11,7 @@ import time
 import subprocess
 import time
 import re
+import traceback
 
 def dbg(s):
     sys.stderr.write(s + "\n")
@@ -35,62 +36,51 @@ class MainScreen(screen.DisplayScreen):
         s = strw(s, screen.SCREENW//2-1, screen.SCREENH, "CAT")    
         s = strw(s, screen.SCREENW-2, screen.SCREENH, "DBG")
 
-        self.nmea = False
-        self.net = False
-        self.ip = "192.168.4.36"
-        self.mmsi = "257098740"
-        self.lat = 4.12345
-        self.lon = 40.33218
-        self.time = datetime.datetime.now()
-        
         screen.DisplayScreen.__init__(self, s)
+        
+        self["nmea"] = False
+        self["net"] = False
+        self["ip"] = "192.168.4.36"
+        self["mmsi"] = "257098740"
+        self["latlon"] = (4.12345, 40.33218)
+        self["time"] = datetime.datetime.now()
 
     def display(self):
         screen.DisplayScreen.display(self)
-        self.set_nmea(self.nmea)
-        self.set_net(self.net)
-        self.set_mmsi(self.mmsi)
-        self.set_ip(self.ip)
-        self.set_latlon(self.lat, self.lon, self.time)
-        
-    def set_nmea(self, up):
-        self.nmea = up
-        if self.displaying:
-            screen.wr(b"\x1b[1;%sH" % (str(screen.SCREENW-3).encode("utf-8"),) + (b"  UP" if up else b"DOWN"))
+
+    def display_nmea(self, up):
+        self.wr(b"\x1b[1;%sH" % (str(screen.SCREENW-3).encode("utf-8"),) + (b"  UP" if up else b"DOWN"))
                 
-    def set_net(self, up):
-        self.net = up
-        if self.displaying:
-            screen.wr(b"\x1b[2;%sH" % (str(screen.SCREENW-3).encode("utf-8"),) + (b"  UP" if up else b"DOWN"))
+    def display_net(self, up):
+        self.wr(b"\x1b[2;%sH" % (str(screen.SCREENW-3).encode("utf-8"),) + (b"  UP" if up else b"DOWN"))
             
-    def set_mmsi(self, mmsi):
-        self.mmsi = mmsi
-        if self.displaying:
-            screen.wr(b"\x1b[1;7H" + b" " * 9)
-            screen.wr(b"\x1b[1;7H" + mmsi.encode("utf-8"))
+    def display_mmsi(self, mmsi):
+        self.wr(b"\x1b[1;7H" + b" " * 9)
+        self.wr(b"\x1b[1;7H" + mmsi.encode("utf-8"))
 
-    def set_ip(self, ip):
-        self.ip = ip
-        if self.displaying:
-            screen.wr(b"\x1b[2;5H" + strw(" " * 15, 1, 1, (ip or "")).encode("utf-8"))
+    def display_ip(self, ip):
+        self.wr(b"\x1b[2;5H" + strw(" " * 15, 1, 1, (ip or "")).encode("utf-8"))
 
-    def set_latlon(self, lat, lon, time=None):
-        self.lat = lat
-        self.lon = lon
-        if lat is not None and lon is not None:
-            self.set_nmea(True)
-            if time is None:
-                time = datetime.datetime.now()
-            self.time = time
+    def updated_latlon(self, value):
+        if value is not None:
+            self["nmea"] = True
+            self["time"] = datetime.datetime.now()
         else:
-            self.set_nmea(False)
-        if self.displaying:
-            screen.wr(b"\x1b[3;6H" + strw(" " * (screen.SCREENW-6), 1, 1, str(lat) if lat is not None else "").encode("utf-8"))
-            screen.wr(b"\x1b[4;6H" + strw(" " * (screen.SCREENW-6), 1, 1, str(lon) if lon is not None else "").encode("utf-8"))
-            screen.wr(b"\x1b[5;11H" + strw(" " * (screen.SCREENW-11), 1, 1,
-                                           self.time.strftime("%Y-%m-%d %H:%M:%S")
-                                           if lat is not None and lon is not None
-                                           else b"No positions received").encode("utf-8"))
+            self["nmea"] = False
+        
+    def display_latlon(self, value):
+        if value is not None:
+            lat, lon = value
+        else:
+            lat = lon = ""
+        self.wr(b"\x1b[3;6H" + strw(" " * (screen.SCREENW-6), 1, 1, str(lat) if lat is not None else "").encode("utf-8"))
+        self.wr(b"\x1b[4;6H" + strw(" " * (screen.SCREENW-6), 1, 1, str(lon) if lon is not None else "").encode("utf-8"))
+        
+    def display_time(self, value):
+        self.wr(b"\x1b[5;11H" + strw(" " * (screen.SCREENW-11), 1, 1,
+                                     value.strftime("%Y-%m-%d %H:%M:%S")
+                                     if self["latlon"] is not None
+                                     else "No positions received").encode("utf-8"))
 
     def action_0(self):
         return config_screen
@@ -271,8 +261,12 @@ class Screen(threading.Thread):
 class Status(threading.Thread):
     def run(self):
         for line in sys.stdin:
-            eval(line)
-
+            try:
+                eval(line)
+            except Exception as e:
+                print(e)
+                traceback.print_exc()
+                
 class IpStatus(threading.Thread):
     def run(self):
         while True:
@@ -280,7 +274,7 @@ class IpStatus(threading.Thread):
             for ip in monitor_ip.get_ips():
                 if ip != '127.0.0.1':
                     current_ip = ip
-            main_screen.set_ip(current_ip)
+            main_screen.ip = current_ip
             time.sleep(1)
         
 def main():

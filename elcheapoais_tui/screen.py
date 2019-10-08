@@ -4,6 +4,7 @@ import sys
 import os
 import serial
 import datetime
+import threading
 
 SCREENW=32
 SCREENH=9
@@ -29,7 +30,7 @@ def rd():
             except:
                 pass
 
-def wr(s):
+def write(s):
     while True:
         try:
             return term.write(s)
@@ -40,37 +41,73 @@ def wr(s):
                 sopen()
             except:
                 pass
-    
-class Menu(object):
-    def __init__(self, entries):
-        self.entries = entries
 
+class Screen(object):
+    def __init__(self, **properties):
+        self.writegroup = threading.RLock()
+        self.properties = properties
+        
+    def wr(self, s):
+        if self.displaying:
+            with self.writegroup:
+                write(s)
+            
     def run(self):
-        self.display()
+        self.displaying = True
+        with self.writegroup:
+            self.display()
+            for name, value in self.properties.items():
+                self._display_property(name, value)
         res = self.handle_input()
-        action = "action_%s" % res
+        self.displaying = False
+        return self.action(res)
+
+    def action(self, value):
+        action = "action_%s" % value
         if hasattr(self, action):
             return getattr(self, action)()
         else:
             return res
-        
+
+    def __setitem__(self, name, value):
+        self.properties[name] = value
+        self._display_property(name, value)
+        notify = "updated_%s" % name
+        if hasattr(self, notify):
+            getattr(self, notify)(value)
+
+    def __getitem__(self, name):
+        return self.properties[name]        
+
+    def _display_property(self, name, value):
+        if not self.displaying: return
+        renderer = "display_%s" % name
+        if hasattr(self, renderer):
+            with self.writegroup:
+                getattr(self, renderer)(value)
+                
+class Menu(Screen):
+    def __init__(self, entries, **properties):
+        Screen.__init__(self, **properties)
+        self.entries = entries
+
     def display(self):
-        wr(b"\x1bc\x1b[2J")
-        wr(b"*" * SCREENW + b"\r\n")
+        self.wr(b"\x1bc\x1b[2J")
+        self.wr(b"*" * SCREENW + b"\r\n")
         for entry in self.entries:
-            wr(b"*" + (b" " * (SCREENW-2)) + b"*" + b"\r\n")
-        wr(b"*" * SCREENW + b"\r\n")
+            self.wr(b"*" + (b" " * (SCREENW-2)) + b"*" + b"\r\n")
+        self.wr(b"*" * SCREENW + b"\r\n")
         for idx, entry in enumerate(self.entries):
-            wr(b"\x1b[%s;3H%s" % (str(idx + 2).encode("utf-8"), entry.encode("utf-8")))
+            self.wr(b"\x1b[%s;3H%s" % (str(idx + 2).encode("utf-8"), entry.encode("utf-8")))
 
     def move(self, direction):
-        wr(b"\x1b[%s;2H " % ((str(self.pos + 2).encode("utf-8"))))
+        self.wr(b"\x1b[%s;2H " % ((str(self.pos + 2).encode("utf-8"))))
         self.pos += direction
         if self.pos < 0:
             self.pos = 0
         if self.pos >= len(self.entries):
             self.pos = len(self.entries) - 1
-        wr(b"\x1b[%s;2H>" % ((str(self.pos + 2).encode("utf-8"))))
+        self.wr(b"\x1b[%s;2H>" % ((str(self.pos + 2).encode("utf-8"))))
             
     def handle_input(self):
         self.pos = 0
@@ -91,29 +128,16 @@ class Menu(object):
                             break
             elif c1 == b"\n" or c1 == b"\r":
                 return self.pos
-        return self.pos
 
-class DisplayScreen(object):
-    def __init__(self, content):
+class DisplayScreen(Screen):
+    def __init__(self, content, **properties):
+        Screen.__init__(self, **properties)
         self.content = content
         self.displaying = False
 
-    def run(self):
-        try:
-            self.displaying = True
-            self.display()
-            res = self.handle_input()
-        finally:
-            self.displaying = False
-        action = "action_%s" % res
-        if hasattr(self, action):
-            return getattr(self, action)()
-        else:
-            return res
-        
     def display(self):
-        wr(b"\x1bc\x1b[2J")
-        wr(self.content.replace("\n", "\r\n").encode("utf-8"))
+        self.wr(b"\x1bc\x1b[2J")
+        self.wr(self.content.replace("\n", "\r\n").encode("utf-8"))
             
     def handle_input(self):
         while True:
@@ -129,10 +153,10 @@ class DisplayScreen(object):
                             return 2
             elif c1 == b"\n" or c1 == b"\r":
                 return 1
-        return self.pos
 
-class Dial(object):
-    def __init__(self, label, value, inc=1):
+class Dial(Screen):
+    def __init__(self, label, value, inc=1, **properties):
+        Screen.__init__(self, **properties)
         self.y = len(label.split("\n"))
         self.x = len(label.split("\n")[-1]) + 1
         self.label = label.replace("\n", "\r\n").encode("utf-8")
@@ -140,31 +164,19 @@ class Dial(object):
         self.len = 0
         self.inc = inc
     
-    def run(self):
-        try:
-            self.displaying = True
-            self.display()
-            self.handle_input()
-        finally:
-            self.displaying = False
-        if hasattr(self, "action"):
-            return self.action(self.value)
-        else:
-            return self.value
-            
     def display(self):
-        wr(b"\x1bc\x1b[2J")
-        wr(self.label)
+        self.wr(b"\x1bc\x1b[2J")
+        self.wr(self.label)
         self.set_value(self.value)
 
     def set_value(self, value):
         self.value = value
         if self.displaying:
-            wr(b"\x1b[%s;%sH" % (str(self.y).encode("utf-8"), str(self.x).encode("utf-8")))
+            self.wr(b"\x1b[%s;%sH" % (str(self.y).encode("utf-8"), str(self.x).encode("utf-8")))
             s = str(self.value)
             pad = " " * (max(self.len - len(s), 0))
             self.len = len(s)
-            wr((s+pad).encode("utf-8"))
+            self.wr((s+pad).encode("utf-8"))
             
     def handle_input(self):
         while True:
@@ -181,49 +193,38 @@ class Dial(object):
                             self.set_value(self.value - self.inc)
                             break
             elif c1 == b"\n" or c1 == b"\r":
-                return
+                return self.value
 
-class TextEntry(object):
-    def __init__(self, label, value=""):
+class TextEntry(Screen):
+    def __init__(self, label, value="", **properties):
+        Screen.__init__(self, **properties)
         self.y = len(label.split("\n"))
         self.x = len(label.split("\n")[-1]) + 1
         self.label = label.replace("\n", "\r\n").encode("utf-8")
         self.value = value
     
-    def run(self):
-        try:
-            self.displaying = True
-            self.display()
-            self.handle_input()
-        finally:
-            self.displaying = False
-        if hasattr(self, "action"):
-            return self.action(self.value)
-        else:
-            return self.value
-            
     def display(self):
-        wr(b"\x1bc\x1b[2J")
-        wr(self.label)
+        self.wr(b"\x1bc\x1b[2J")
+        self.wr(self.label)
         self.set_value(self.value)
 
     def set_value(self, value):
         self.value = value
         if self.displaying:
-            wr(b"\x1b[%s;%sH" % (str(self.y).encode("utf-8"), str(self.x).encode("utf-8")))
-            wr(self.value.encode("utf-8"))
+            self.wr(b"\x1b[%s;%sH" % (str(self.y).encode("utf-8"), str(self.x).encode("utf-8")))
+            self.wr(self.value.encode("utf-8"))
             
     def handle_input(self):
         while True:
             c1 = rd()
             if c1 == b"\n" or c1 == b"\r":
-                return
+                return self.value
             elif c1 == b"\b":
                 self.value = self.value[:-1]
-                wr(b"\x1b[%s;%sH " % (str(self.y).encode("utf-8"), str(self.x + len(self.value)).encode("utf-8")))
+                self.wr(b"\x1b[%s;%sH " % (str(self.y).encode("utf-8"), str(self.x + len(self.value)).encode("utf-8")))
             else:
                 self.value = self.value + c1.decode("utf-8")
-                wr(b"\x1b[%s;%sH%s" % (str(self.y).encode("utf-8"), str(self.x + len(self.value) - 1).encode("utf-8"), c1))
+                self.wr(b"\x1b[%s;%sH%s" % (str(self.y).encode("utf-8"), str(self.x + len(self.value) - 1).encode("utf-8"), c1))
 
 
 class TextScroll(object):
@@ -235,19 +236,11 @@ class TextScroll(object):
                 line = line[SCREENW:]
         self.pos = 0
     
-    def run(self):
-        self.display()
-        self.handle_input()
-        if hasattr(self, "action"):
-            return self.action()
-        else:
-            return True
-            
     def display(self):
-        wr(b"\x1bc\x1b[2J")
+        self.wr(b"\x1bc\x1b[2J")
         lines = self.content[self.pos:self.pos + SCREENH]
         for line in lines:
-            wr(line.encode("utf-8") + b"\r\n")
+            self.wr(line.encode("utf-8") + b"\r\n")
 
     def handle_input(self):
         while True:
@@ -266,5 +259,5 @@ class TextScroll(object):
                             self.display()
                             break
             elif c1 == b"\n" or c1 == b"\r":
-                return
+                return 0
 
