@@ -12,6 +12,7 @@ import subprocess
 import time
 import re
 import traceback
+import termios
 
 def dbg(s):
     sys.stderr.write(s + "\n")
@@ -244,7 +245,16 @@ class ShellScreen(object):
     def __init__(self):
         pass
     def run(self):
-        subprocess.run("/bin/bash", stdin=screen.term.fileno(), stdout=screen.term.fileno(), stderr=screen.term.fileno())
+        fd = screen.term.fileno()
+        old = termios.tcgetattr(fd)
+        new = termios.tcgetattr(fd)
+        new[1] = new[1] | termios.ONLCR
+        try:
+            termios.tcsetattr(fd, termios.TCSADRAIN, new)
+            subprocess.run("/bin/bash", stdin=fd, stdout=fd, stderr=fd)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
         return debug_screen
     
 main_screen = MainScreen()
