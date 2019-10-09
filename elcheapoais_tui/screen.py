@@ -225,15 +225,16 @@ class TextEntry(Screen):
                 self.wr(b"\x1b[%s;%sH%s" % (str(self.y).encode("utf-8"), str(self.x + len(self.value) - 1).encode("utf-8"), c1))
 
 
-class TextScroll(object):
-    def __init__(self, content):
+class TextScroll(Screen):
+    def __init__(self, content, **properties):
         self.content = []
         for line in content.split("\n"):
             while line:
                 self.content.append(line[:SCREENW])
                 line = line[SCREENW:]
         self.pos = 0
-    
+        Screen.__init__(self, **properties)
+
     def display(self):
         self.wr(b"\x1bc\x1b[2J")
         lines = self.content[self.pos:self.pos + SCREENH]
