@@ -5,6 +5,7 @@ import os
 import serial
 import datetime
 import threading
+import time
 
 SCREENW=32
 SCREENH=9
