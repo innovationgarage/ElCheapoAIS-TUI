@@ -7,6 +7,7 @@ import threading
 import datetime
 from . import screen
 from . import monitor_ip
+from . import dbus_receiver
 import time
 import subprocess
 import time
@@ -25,7 +26,9 @@ def strw(s, x, y, c):
     return "\n".join(lines[:y] + [lines[y][:x] + c + lines[y][x+len(c):]] + lines[y+1:])
     
 class MainScreen(screen.DisplayScreen):
-    def __init__(self):
+    def __init__(self, tui):
+        self.tui = tui
+        
         s = screen.empty_screen
         s = strw(s, 1, 1, "MMSI:")
         s = strw(s, 1, 2, "IP:")
@@ -84,14 +87,15 @@ class MainScreen(screen.DisplayScreen):
                                      else "No positions received").encode("utf-8"))
 
     def action_0(self):
-        return config_screen
+        return self.tui.config_screen
     def action_1(self):
-        return cat_screen
+        return self.tui.cat_screen
     def action_2(self):
-        return debug_screen
+        return self.tui.debug_screen
     
 class ConfigMenu(screen.Menu):
-    def __init__(self):
+    def __init__(self, tui):
+        self.tui = tui
         screen.Menu.__init__(self, [
             "Back",
             "Msgs/min:",
@@ -105,16 +109,17 @@ class ConfigMenu(screen.Menu):
         self.wr(b"\x1b[4;18H" + strw(" " * (screen.SCREENW-19), 1, 1, str(value)).encode("utf-8"))
         
     def action_0(self):
-        return main_screen
+        return self.tui.main_screen
     def action_1(self):
-        msgs_min_screen["value"] = self["msgs_per_min"]
-        return msgs_min_screen
+        self.tui.msgs_min_screen["value"] = self["msgs_per_min"]
+        return self.tui.msgs_min_screen
     def action_2(self):
-        msgs_min_mmsi_screen["value"] = self["msgs_per_min_per_mmsi"]
-        return msgs_min_mmsi_screen
+        self.tui.msgs_min_mmsi_screen["value"] = self["msgs_per_min_per_mmsi"]
+        return self.tui.msgs_min_mmsi_screen
 
 class DebugMenu(screen.Menu):
-    def __init__(self):
+    def __init__(self, tui):
+        self.tui = tui
         screen.Menu.__init__(self, [
             "Back",
             "Ping server",
@@ -125,20 +130,21 @@ class DebugMenu(screen.Menu):
         ])
         
     def action_0(self):
-        return main_screen
+        return self.tui.main_screen
     def action_1(self):
-        return ping_screen
+        return self.tui.ping_screen
     def action_2(self):
-        return syslog_screen
+        return self.tui.syslog_screen
     def action_3(self):
-        return shell_screen
+        return self.tui.shell_screen
     def action_4(self):
-        return main_screen
+        return self.tui.main_screen
     def action_5(self):
-        return main_screen
+        return self.tui.main_screen
 
 class CatScreen(screen.DisplayScreen):
-    def __init__(self):
+    def __init__(self, tui):
+        self.tui = tui
         s = screen.empty_screen
         cat = r"""       _..---..,""-._     ,/}/)
     .''       ,      ``..'(/-<
@@ -163,39 +169,43 @@ class CatScreen(screen.DisplayScreen):
         screen.DisplayScreen.__init__(self, s)
 
     def action_0(self):
-        return main_screen
+        return self.tui.main_screen
     def action_1(self):
-        return main_screen
+        return self.tui.main_screen
     def action_2(self):
-        return main_screen
+        return self.tui.main_screen
 
 class MsgsMinScreen(screen.Dial):
-    def __init__(self):
+    def __init__(self, tui):
+        self.tui = tui
         screen.Dial.__init__(self, "Messages/minute total: ", 100)
 
     def action(self, value):
-        config_screen["msgs_per_min"] = value
-        return config_screen
+        self.tui.config_screen["msgs_per_min"] = value
+        return self.tui.config_screen
     
 class MsgsMinMmsiScreen(screen.Dial):
-    def __init__(self):
+    def __init__(self, tui):
+        self.tui = tui
         screen.Dial.__init__(self, "Messages/minute/mmsi: ", 10)
 
     def action(self, value):
-        config_screen["msgs_per_min_per_mmsi"] = value
-        return config_screen
+        self.tui.config_screen["msgs_per_min_per_mmsi"] = value
+        return self.tui.config_screen
 
 class PingScreen(screen.TextEntry):
-    def __init__(self):
+    def __init__(self, tui):
+        self.tui = tui
         screen.TextEntry.__init__(self, "IP/domain to ping:\n", value="8.8.8.8")
 
     def action(self, value):
-        pinging_screen.ip = value
-        return pinging_screen
+        self.tui.pinging_screen.ip = value
+        return self.tui.pinging_screen
     
 class PingingThread(threading.Thread):
-    def __init__(self, ip):
-        self.ip = ip
+    def __init__(self, screen):
+        self.screen = screen
+        self.ip = screen.ip
         self.do_quit = False
         self.quit_done = False
         threading.Thread.__init__(self)
@@ -209,41 +219,43 @@ class PingingThread(threading.Thread):
             line = re.sub(rb"PING ([^ ]*) \([^ ]*\) ([^ ]*) .*", rb"ip \1 \2B", line)
             line = re.sub(rb"([^ ]*) bytes from ([^:]*): icmp_seq=([^ ]*) ttl=([^ ]*) time=([^ ]*) ms", rb"\1B sq=\3 ttl=\4 \5ms", line)
             if not self.do_quit:
-                screen.wr(line.replace(b"\n", b"\r\n"))
+                self.screen.wr(line.replace(b"\n", b"\r\n"))
 
 class PingingScreen(screen.DisplayScreen):
-    def __init__(self):
+    def __init__(self, tui):
+        self.tui = tui
         self.ip = ""
         screen.DisplayScreen.__init__(self, "")
 
     def display(self):
         self.content = "Pinging: %s\n" % self.ip
         screen.DisplayScreen.display(self)
-        self.thread = PingingThread(self.ip)
+        self.thread = PingingThread(self)
         self.thread.start()
     def action_0(self):
         self.thread.quit()
-        return debug_screen
+        return self.tui.debug_screen
     def action_1(self):
         self.thread.quit()
-        return debug_screen
+        return self.tui.debug_screen
     def action_2(self):
         self.thread.quit()
-        return debug_screen
+        return self.tui.debug_screen
 
 class SyslogScreen(screen.TextScroll):
-    def __init__(self):
+    def __init__(self, tui):
+        self.tui = tui
         with open("/var/log/syslog") as f:
             content = f.read()
         content = content.replace(": ", ":\n")
         screen.TextScroll.__init__(self, content)
 
     def action(self):
-        return debug_screen
+        return self.tui.debug_screen
 
 class ShellScreen(object):
-    def __init__(self):
-        pass
+    def __init__(self, tui):
+        self.tui = tui
     def run(self):
         fd = screen.term.fileno()
         old = termios.tcgetattr(fd)
@@ -255,30 +267,22 @@ class ShellScreen(object):
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
-        return debug_screen
-    
-main_screen = MainScreen()
-config_screen = ConfigMenu()
-debug_screen = DebugMenu()
-cat_screen = CatScreen()
-msgs_min_screen = MsgsMinScreen()
-msgs_min_mmsi_screen = MsgsMinMmsiScreen()
-ping_screen = PingScreen()
-pinging_screen = PingingScreen()
-syslog_screen = SyslogScreen()
-shell_screen = ShellScreen()
-
-current = main_screen
+        return self.tui.debug_screen
 
 
-class Screen(threading.Thread):
+class ScreenThread(threading.Thread):
+    def __init__(self, tui):
+        self.tui = tui
+        threading.Thread.__init__(self)
     def run(self):
-        global current
-        while current:
-            current = current.run()
-            print("XXXXXXXXXXXXX", current)
+        while self.tui.current:
+            self.tui.current = self.tui.current.run()
+            print("XXXXXXXXXXXXX", self.tui.current)
 
-class Status(threading.Thread):
+class StatusThread(threading.Thread):
+    def __init__(self, tui):
+        self.tui = tui
+        threading.Thread.__init__(self)
     def run(self):
         for line in sys.stdin:
             try:
@@ -287,17 +291,43 @@ class Status(threading.Thread):
                 print(e)
                 traceback.print_exc()
                 
-class IpStatus(threading.Thread):
+class IpStatusThread(threading.Thread):
+    def __init__(self, tui):
+        self.tui = tui
+        threading.Thread.__init__(self)
     def run(self):
         while True:
             current_ip = None
             for ip in monitor_ip.get_ips():
                 if ip != '127.0.0.1':
                     current_ip = ip
-            main_screen["ip"] = current_ip
+            self.tui.main_screen["ip"] = current_ip
             time.sleep(1)
         
+
+class TUI(object):
+    def __init__(self):
+        self.main_screen = MainScreen(self)
+        self.config_screen = ConfigMenu(self)
+        self.debug_screen = DebugMenu(self)
+        self.cat_screen = CatScreen(self)
+        self.msgs_min_screen = MsgsMinScreen(self)
+        self.msgs_min_mmsi_screen = MsgsMinMmsiScreen(self)
+        self.ping_screen = PingScreen(self)
+        self.pinging_screen = PingingScreen(self)
+        self.syslog_screen = SyslogScreen(self)
+        self.shell_screen = ShellScreen(self)
+        
+        self.current = self.main_screen
+
+        self.screen_thread = ScreenThread(self)
+        self.screen_thread.start()
+        self.status_thread = StatusThread(self)
+        self.status_thread.start()
+        self.ip_status_thread = IpStatusThread(self)
+        self.ip_status_thread.start()
+        self.dbus_thread = dbus_receiver.DBusReceiver(self)
+        self.dbus_thread.start()
+
 def main():
-    Screen().start()
-    Status().start()
-    IpStatus().start()
+    TUI()
