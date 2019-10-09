@@ -6,7 +6,6 @@ import serial
 import threading
 import datetime
 from . import screen
-from . import monitor_ip
 from . import dbus_receiver
 from . import screen_main
 from . import screen_config
@@ -49,19 +48,6 @@ class StatusThread(threading.Thread):
                 print(e)
                 traceback.print_exc()
                 
-class IpStatusThread(threading.Thread):
-    def __init__(self, tui):
-        self.tui = tui
-        threading.Thread.__init__(self)
-    def run(self):
-        while True:
-            current_ip = None
-            for ip in monitor_ip.get_ips():
-                if ip != '127.0.0.1':
-                    current_ip = ip
-            self.tui.main_screen["ip"] = current_ip
-            time.sleep(1)
-        
 
 class TUI(object):
     def __init__(self):
@@ -85,8 +71,6 @@ class TUI(object):
         self.screen_thread.start()
         self.status_thread = StatusThread(self)
         self.status_thread.start()
-        self.ip_status_thread = IpStatusThread(self)
-        self.ip_status_thread.start()
         self.dbus_thread = dbus_receiver.DBusReceiver(self)
         self.dbus_thread.start()
 
