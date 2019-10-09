@@ -19,13 +19,13 @@ class MainScreen(screen.DisplayScreen):
 
         screen.DisplayScreen.__init__(self, s)
         
-        self["nmea"] = False
-        self["net"] = False
         self["ip"] = "192.168.4.36"
         self["mmsi"] = "257098740"
         self["latlon"] = (4.12345, 40.33218)
         self["time"] = datetime.datetime.now()
-
+        self["nmea"] = False
+        self["net"] = False
+        
     def display(self):
         screen.DisplayScreen.display(self)
 

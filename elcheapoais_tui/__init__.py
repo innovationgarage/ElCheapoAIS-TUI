@@ -49,6 +49,17 @@ class StatusThread(threading.Thread):
                 traceback.print_exc()
                 
 
+class NMEAStatusThread(threading.Thread):
+    def __init__(self, tui):
+        self.tui = tui
+        threading.Thread.__init__(self)
+    def run(self):
+        while True:
+            if (datetime.datetime.now() - self.tui.main_screen["time"]).total_seconds() > 10:
+                self.tui.main_screen["nmea"] = False
+            time.sleep(1)
+
+                
 class TUI(object):
     def __init__(self):
         self.main_screen = screen_main.MainScreen(self)
@@ -73,6 +84,8 @@ class TUI(object):
         self.status_thread.start()
         self.dbus_thread = dbus_receiver.DBusReceiver(self)
         self.dbus_thread.start()
+        self.nmea_status_thread = NMEAStatusThread(self)
+        self.nmea_status_thread.start()
 
 def main():
     TUI()

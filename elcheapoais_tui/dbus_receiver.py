@@ -7,6 +7,11 @@ import gi.repository.GLib
 import threading
 import json
 
+def timeout(to):
+    def wrapper(fn):
+        gi.repository.GLib.timeout_add(to, fn)
+    return wrapper
+
 nm_states = {0: "NM_ACTIVE_CONNECTION_STATE_UNKNOWN",
              1: "NM_ACTIVE_CONNECTION_STATE_ACTIVATING",
              2: "NM_ACTIVE_CONNECTION_STATE_ACTIVATED",
@@ -32,9 +37,10 @@ class DBusReceiver(threading.Thread):
         self.nm_connections = {} 
         threading.Thread.__init__(self)
     
-    def nmea_signal(msg):
+    def nmea_signal(self, msg):
         msg = json.loads(msg)
-        self.tui.main_screen["latlon"] = (msg["lat"], msg["lon"])
+        if msg and "lat" in msg and "lon" in msg:
+            self.tui.main_screen["latlon"] = (msg["lat"], msg["lon"])
 
     def nm_state_changed(self, state, reason, dbus_message):
         state = nm_states[state]
@@ -73,7 +79,7 @@ class DBusReceiver(threading.Thread):
         connections = nm.Get("org.freedesktop.NetworkManager", "ActiveConnections")
         for connection in connections:
             self.nm_add_connection(connection)
-        
+
         loop = gi.repository.GLib.MainLoop()
         loop.run()
     
