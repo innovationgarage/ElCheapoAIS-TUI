@@ -7,6 +7,7 @@ import gi.repository.GLib
 import gi.repository.GObject
 import threading
 import json
+import os
 
 def get(bus, bus_name, obj_path, interface_name, parameter_name, default=None):
     try:
@@ -39,11 +40,11 @@ def get_ip(bus, connection):
     )["ip_address"]
 
 class DBusReceiver(threading.Thread):
-    def __init__(self, tui, bus="SystemBus"):
+    def __init__(self, tui):
         gi.repository.GObject.threads_init()
         dbus.mainloop.glib.threads_init()
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-        self.bus = getattr(dbus, bus)()
+        self.bus = getattr(dbus, os.environ.get("ELCHEAPOAIS_DBUS", "SystemBus"))()
         self.tui = tui
         self.nm_connections = {} 
         threading.Thread.__init__(self)

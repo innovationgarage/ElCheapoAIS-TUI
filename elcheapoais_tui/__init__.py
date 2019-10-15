@@ -80,7 +80,7 @@ class TUI(object):
 
         self.screen_thread = ScreenThread(self)
         self.status_thread = StatusThread(self)
-        self.dbus_thread = dbus_receiver.DBusReceiver(self, "SessionBus")
+        self.dbus_thread = dbus_receiver.DBusReceiver(self)
         self.nmea_status_thread = NMEAStatusThread(self)
         
         self.screen_thread.start()
