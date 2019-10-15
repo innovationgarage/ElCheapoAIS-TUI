@@ -79,12 +79,13 @@ class TUI(object):
         self.current = self.main_screen
 
         self.screen_thread = ScreenThread(self)
-        self.screen_thread.start()
         self.status_thread = StatusThread(self)
-        self.status_thread.start()
-        self.dbus_thread = dbus_receiver.DBusReceiver(self)
-        self.dbus_thread.start()
+        self.dbus_thread = dbus_receiver.DBusReceiver(self, "SessionBus")
         self.nmea_status_thread = NMEAStatusThread(self)
+        
+        self.screen_thread.start()
+        self.status_thread.start()
+        self.dbus_thread.start()        
         self.nmea_status_thread.start()
 
 def main():
