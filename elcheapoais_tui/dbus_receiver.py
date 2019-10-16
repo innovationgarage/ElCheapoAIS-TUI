@@ -2,6 +2,7 @@ import sys
 import traceback
 
 import dbus
+import dbus.service
 import dbus.mainloop.glib
 import gi.repository.GLib
 import gi.repository.GObject
@@ -45,6 +46,7 @@ class DBusReceiver(threading.Thread):
         dbus.mainloop.glib.threads_init()
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         self.bus = getattr(dbus, os.environ.get("ELCHEAPOAIS_DBUS", "SystemBus"))()
+        self.bus_name = dbus.service.BusName('no.innovationgarage.elcheapoais.tui', self.bus)
         self.tui = tui
         self.nm_connections = {} 
         threading.Thread.__init__(self)
@@ -53,6 +55,9 @@ class DBusReceiver(threading.Thread):
         msg = json.loads(msg)
         if msg and "lat" in msg and "lon" in msg:
             self.tui.main_screen["latlon"] = (msg["lat"], msg["lon"])
+
+    def manhole_signal(self, status, errno):
+        self.tui.main_screen["net"] = status
 
     def PropertiesChanged(self, interface_name, properties_modified, properties_deleted, dbus_message):
         if interface_name == "no.innovationgarage.elcheapoais.receiver":    
@@ -79,11 +84,15 @@ class DBusReceiver(threading.Thread):
             self.tui.main_screen["ip"] = None
     
     def run(self, *arg, **kw):
-        
+
         self.bus.add_signal_receiver(
             self.nmea_signal,
             dbus_interface = "no.innovationgarage.elcheapoais",
             signal_name = "NMEA")
+        self.bus.add_signal_receiver(
+            self.manhole_signal,
+            dbus_interface = "no.innovationgarage.elcheapoais",
+            signal_name = "manhole")
         self.bus.add_signal_receiver(
             self.nm_state_changed,
             dbus_interface = "org.freedesktop.NetworkManager.Connection.Active",
