@@ -65,7 +65,7 @@ class WifiManager(object):
             ).ActivateConnection(ap_connection, device_path, "/")
         else:
             dbus.Interface(
-                bus.get_object("org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager"),
+                self.bus.get_object("org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager"),
                 "org.freedesktop.NetworkManager"
             ).AddAndActivateConnection(
                 dbus.Dictionary({
