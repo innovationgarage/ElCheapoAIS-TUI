@@ -9,6 +9,7 @@ import gi.repository.GObject
 import threading
 import json
 import os
+from . import wifi_manager
 
 def get(bus, bus_name, obj_path, interface_name, parameter_name, default=None):
     try:
@@ -46,9 +47,10 @@ class DBusReceiver(threading.Thread):
         dbus.mainloop.glib.threads_init()
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         self.bus = getattr(dbus, os.environ.get("ELCHEAPOAIS_DBUS", "SystemBus"))()
-        self.bus_name = dbus.service.BusName('no.innovationgarage.elcheapoais.tui', self.bus)
+#        self.bus_name = dbus.service.BusName('no.innovationgarage.elcheapoais.tui', self.bus)
         self.tui = tui
-        self.nm_connections = {} 
+        self.nm_connections = {}
+        self.wifi_manager = wifi_manager.WifiManager(self.bus)
         threading.Thread.__init__(self)
     
     def nmea_signal(self, msg):

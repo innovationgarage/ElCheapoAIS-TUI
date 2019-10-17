@@ -9,6 +9,7 @@ from . import screen
 from . import dbus_receiver
 from . import screen_main
 from . import screen_config
+from . import screen_wifi
 from . import screen_debug
 from . import screen_ping
 from . import screen_cat
@@ -67,7 +68,9 @@ class TUI(object):
         self.config_screen = screen_config.ConfigMenu(self)
         self.msgs_min_screen = screen_config.MsgsMinScreen(self)
         self.msgs_min_mmsi_screen = screen_config.MsgsMinMmsiScreen(self)
-
+        self.wifi_screen = screen_wifi.WifiScreen(self)
+        self.wifi_password_screen = screen_wifi.PasswordScreen(self)
+        
         self.cat_screen = screen_cat.CatScreen(self)
         
         self.debug_screen = screen_debug.DebugMenu(self)
