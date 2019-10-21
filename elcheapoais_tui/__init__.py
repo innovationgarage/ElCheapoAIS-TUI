@@ -87,9 +87,9 @@ class TUI(object):
         self.nmea_status_thread = NMEAStatusThread(self)
         
         self.screen_thread.start()
-        self.status_thread.start()
-        self.dbus_thread.start()        
-        self.nmea_status_thread.start()
+#        self.status_thread.start()
+#        self.dbus_thread.start()        
+#        self.nmea_status_thread.start()
 
 def main():
     TUI()

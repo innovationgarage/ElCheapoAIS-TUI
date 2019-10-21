@@ -55,13 +55,14 @@ class Screen(object):
                 write(s)
             
     def run(self):
-        self.displaying = True
         with self.writegroup:
+            self.displaying = True
             self.display()
             for name, value in self.properties.items():
                 self._display_property(name, value)
         res = self.handle_input()
-        self.displaying = False
+        with self.writegroup:
+            self.displaying = False
         return self.action(res)
 
     def action(self, value):
@@ -82,11 +83,11 @@ class Screen(object):
         return self.properties[name]        
 
     def _display_property(self, name, value):
-        if not self.displaying: return
         renderer = "display_%s" % name
         if hasattr(self, renderer):
             with self.writegroup:
-                getattr(self, renderer)(value)
+                if self.displaying:
+                    getattr(self, renderer)(value)
                 
 class Menu(Screen):
     def __init__(self, entries, **properties):
@@ -103,13 +104,14 @@ class Menu(Screen):
             self.wr(b"\x1b[%s;3H%s" % (str(idx + 2).encode("utf-8"), entry.encode("utf-8")))
 
     def move(self, direction):
-        self.wr(b"\x1b[%s;2H " % ((str(self.pos + 2).encode("utf-8"))))
-        self.pos += direction
-        if self.pos < 0:
-            self.pos = 0
-        if self.pos >= len(self.entries):
-            self.pos = len(self.entries) - 1
-        self.wr(b"\x1b[%s;2H>" % ((str(self.pos + 2).encode("utf-8"))))
+        with self.writegroup:
+            self.wr(b"\x1b[%s;2H " % ((str(self.pos + 2).encode("utf-8"))))
+            self.pos += direction
+            if self.pos < 0:
+                self.pos = 0
+            if self.pos >= len(self.entries):
+                self.pos = len(self.entries) - 1
+            self.wr(b"\x1b[%s;2H>" % ((str(self.pos + 2).encode("utf-8"))))
             
     def handle_input(self):
         self.pos = 0
