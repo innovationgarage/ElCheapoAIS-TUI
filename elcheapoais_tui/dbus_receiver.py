@@ -86,6 +86,7 @@ class DBusReceiver(threading.Thread):
             self.tui.main_screen["ip"] = None
     
     def run(self, *arg, **kw):
+        print("NANANANANANANANA")
 
         self.bus.add_signal_receiver(
             self.nmea_signal,
@@ -120,9 +121,11 @@ class DBusReceiver(threading.Thread):
         try:
             nm = dbus.Interface(self.bus.get_object("org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager"), "org.freedesktop.DBus.Properties")
             connections = nm.Get("org.freedesktop.NetworkManager", "ActiveConnections")
+            print("XXXXXXXXXXXXXXXXXX", connections)
             for connection in connections:
                 self.nm_add_connection(connection)
         except Exception as e:
+            print("YYYYYYYYYYYYYYYYYYYY")
             print(e)
                 
         loop = gi.repository.GLib.MainLoop()
