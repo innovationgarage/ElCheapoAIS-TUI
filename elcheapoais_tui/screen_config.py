@@ -18,12 +18,18 @@ class ConfigMenu(screen.Menu):
         self.wr(b"\x1b[4;18H" + strw(" " * (screen.SCREENW-19), 1, 1, str(value)).encode("utf-8"))
 
     def updated_max_message_per_sec(self, value):
-        downsampler = self.tui.dbus_thread.bus.get_object('no.innovationgarage.elcheapoais.config', '/no/innovationgarage/elcheapoais/downsampler')
-        downsampler.Set("no.innovationgarage.elcheapoais.downsampler", "max_message_per_sec", value)
+        try:
+            downsampler = self.tui.dbus_thread.bus.get_object('no.innovationgarage.elcheapoais.config', '/no/innovationgarage/elcheapoais/downsampler')
+            downsampler.Set("no.innovationgarage.elcheapoais.downsampler", "max_message_per_sec", value)
+        except Exception as e:
+            print(e)
 
     def updated_max_message_per_mmsi_per_sec(self, value):
-        downsampler = self.tui.dbus_thread.bus.get_object('no.innovationgarage.elcheapoais.config', '/no/innovationgarage/elcheapoais/downsampler')
-        downsampler.Set("no.innovationgarage.elcheapoais.downsampler", "max_message_per_mmsi_per_sec", value)
+        try:
+            downsampler = self.tui.dbus_thread.bus.get_object('no.innovationgarage.elcheapoais.config', '/no/innovationgarage/elcheapoais/downsampler')
+            downsampler.Set("no.innovationgarage.elcheapoais.downsampler", "max_message_per_mmsi_per_sec", value)
+        except Exception as e:
+            print(e)
         
     def action_0(self):
         return self.tui.main_screen
