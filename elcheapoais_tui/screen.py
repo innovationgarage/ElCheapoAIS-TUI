@@ -53,13 +53,16 @@ class Screen(object):
         if self.displaying:
             with self.writegroup:
                 write(s)
-            
+
+    def display_all(self):
+        self.display()
+        for name, value in self.properties.items():
+            self._display_property(name, value)
+                
     def run(self):
         with self.writegroup:
             self.displaying = True
-            self.display()
-            for name, value in self.properties.items():
-                self._display_property(name, value)
+            self.display_all()
         res = self.handle_input()
         with self.writegroup:
             self.displaying = False
@@ -95,6 +98,12 @@ class Menu(Screen):
         self.pos = 0
         self.entries = entries
 
+    def display_title(self, value):
+        if value:
+            self.wr(b"\x1b[1;3H{%s}%s" % (value.encode("utf-8"), b"-" * (SCREENW-2 - len(value) - 2 - 1)))
+        else:
+            self.wr(b"\x1b[1;3H%s" % (b"-" * (SCREENW-2 - 1)))
+            
     @property
     def offset(self):
         return (self.pos // (SCREENH-2)) * (SCREENH-2)
@@ -103,10 +112,10 @@ class Menu(Screen):
         entries = self.entries[self.offset:self.offset + SCREENH-2]
         
         self.wr(b"\x1bc\x1b[2J")
-        self.wr(b"*" * SCREENW + b"\r\n")
+        self.wr(b"+" + b"-" * (SCREENW - 2)+ b"+\r\n")
         for entry in entries:
-            self.wr(b"*" + (b" " * (SCREENW-2)) + b"*" + b"\r\n")
-        self.wr(b"*" * SCREENW + b"\r\n")
+            self.wr(b"|" + (b" " * (SCREENW-2)) + b"|" + b"\r\n")
+        self.wr(b"+" + b"-" * (SCREENW - 2)+ b"+\r\n")
         for idx, entry in enumerate(entries):
             self.wr(b"\x1b[%s;3H%s" % (str(idx + 2).encode("utf-8"), entry.encode("utf-8")))
 
@@ -124,7 +133,7 @@ class Menu(Screen):
             if oldoffset == self.offset:
                 self.wr(b"\x1b[%s;2H " % ((str(oldpos + 2 - self.offset).encode("utf-8"))))
             else:
-                self.display()
+                self.display_all()
             self.wr(b"\x1b[%s;2H>" % ((str(self.pos + 2 - self.offset).encode("utf-8"))))
 
             

@@ -10,9 +10,21 @@ class DirectoryScreen(screen.Menu):
     def cd(self, path = '/'):
         self.path = path
         try:
-            self.entries = [".."] + os.listdir(path)
+            entries = os.listdir(path)
         except Exception as e:
             self.entries = ["..", "<%s>" % (e,)]
+        else:
+            dirs = []
+            files = []
+            for entry in entries:
+                if os.path.isdir(os.path.join(self.path, entry)):
+                    dirs.append(entry)
+                else:
+                    files.append(entry)
+            dirs.sort()
+            files.sort()
+            self.entries = [".."] + dirs + files
+        self["title"] = path
         self.pos = 0
 
     def action(self, entry):

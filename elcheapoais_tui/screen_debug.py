@@ -8,8 +8,6 @@ class DebugMenu(screen.Menu):
             "Ping server",
             "File browser",
             "Shell",
-            "Show last msg",
-            "Filesystem status"
         ])
         
     def action_0(self):
@@ -20,7 +18,3 @@ class DebugMenu(screen.Menu):
         return self.tui.directory_screen
     def action_3(self):
         return self.tui.shell_screen
-    def action_4(self):
-        return self.tui.main_screen
-    def action_5(self):
-        return self.tui.main_screen
