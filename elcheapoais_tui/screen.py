@@ -92,29 +92,43 @@ class Screen(object):
 class Menu(Screen):
     def __init__(self, entries, **properties):
         Screen.__init__(self, **properties)
+        self.pos = 0
         self.entries = entries
 
+    @property
+    def offset(self):
+        return (self.pos // (SCREENH-2)) * (SCREENH-2)
+        
     def display(self):
+        entries = self.entries[self.offset:self.offset + SCREENH-2]
+        
         self.wr(b"\x1bc\x1b[2J")
         self.wr(b"*" * SCREENW + b"\r\n")
-        for entry in self.entries:
+        for entry in entries:
             self.wr(b"*" + (b" " * (SCREENW-2)) + b"*" + b"\r\n")
         self.wr(b"*" * SCREENW + b"\r\n")
-        for idx, entry in enumerate(self.entries):
+        for idx, entry in enumerate(entries):
             self.wr(b"\x1b[%s;3H%s" % (str(idx + 2).encode("utf-8"), entry.encode("utf-8")))
 
     def move(self, direction):
         with self.writegroup:
-            self.wr(b"\x1b[%s;2H " % ((str(self.pos + 2).encode("utf-8"))))
+            oldpos = self.pos
+            oldoffset = self.offset
+            
             self.pos += direction
             if self.pos < 0:
                 self.pos = 0
             if self.pos >= len(self.entries):
                 self.pos = len(self.entries) - 1
-            self.wr(b"\x1b[%s;2H>" % ((str(self.pos + 2).encode("utf-8"))))
+
+            if oldoffset == self.offset:
+                self.wr(b"\x1b[%s;2H " % ((str(oldpos + 2 - self.offset).encode("utf-8"))))
+            else:
+                self.display()
+            self.wr(b"\x1b[%s;2H>" % ((str(self.pos + 2 - self.offset).encode("utf-8"))))
+
             
     def handle_input(self):
-        self.pos = 0
         self.move(0)
 
         while True:
