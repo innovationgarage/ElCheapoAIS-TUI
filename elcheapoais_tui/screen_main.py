@@ -36,6 +36,7 @@ class MainScreen(screen.DisplayScreen):
         self.wr(b"\x1b[2;%sH" % (str(screen.SCREENW-3).encode("utf-8"),) + (b"  UP" if up else b"DOWN"))
             
     def display_mmsi(self, mmsi):
+        mmsi = str(mmsi)
         mmsi += " " * (9 - len(mmsi))
         mmsi = str(mmsi).encode("utf-8")
         self.wr(b"\x1b[1;7H" + mmsi)
