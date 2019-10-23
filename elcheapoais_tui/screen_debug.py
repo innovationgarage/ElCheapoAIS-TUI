@@ -6,7 +6,7 @@ class DebugMenu(screen.Menu):
         screen.Menu.__init__(self, [
             "Back",
             "Ping server",
-            "Show syslog",
+            "File browser",
             "Shell",
             "Show last msg",
             "Filesystem status"
@@ -17,7 +17,7 @@ class DebugMenu(screen.Menu):
     def action_1(self):
         return self.tui.ping_screen
     def action_2(self):
-        return self.tui.syslog_screen
+        return self.tui.directory_screen
     def action_3(self):
         return self.tui.shell_screen
     def action_4(self):

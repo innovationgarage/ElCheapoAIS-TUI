@@ -13,7 +13,7 @@ from . import screen_wifi
 from . import screen_debug
 from . import screen_ping
 from . import screen_cat
-from . import screen_syslog
+from . import screen_directory
 from . import screen_shell
 import time
 import subprocess
@@ -76,7 +76,8 @@ class TUI(object):
         self.debug_screen = screen_debug.DebugMenu(self)
         self.ping_screen = screen_ping.PingScreen(self)
         self.pinging_screen = screen_ping.PingingScreen(self)
-        self.syslog_screen = screen_syslog.SyslogScreen(self)
+        self.directory_screen = screen_directory.DirectoryScreen(self)
+        self.file_screen = screen_directory.FileScreen(self)
         self.shell_screen = screen_shell.ShellScreen(self)
         
         self.current = self.main_screen

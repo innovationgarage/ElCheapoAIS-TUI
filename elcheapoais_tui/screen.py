@@ -243,13 +243,16 @@ class TextEntry(Screen):
 
 class TextScroll(Screen):
     def __init__(self, content, **properties):
+        self.set_content(content)
+        Screen.__init__(self, **properties)
+
+    def set_content(self, content):
         self.content = []
         for line in content.split("\n"):
             while line:
                 self.content.append(line[:SCREENW])
                 line = line[SCREENW:]
         self.pos = 0
-        Screen.__init__(self, **properties)
 
     def display(self):
         self.wr(b"\x1bc\x1b[2J")
