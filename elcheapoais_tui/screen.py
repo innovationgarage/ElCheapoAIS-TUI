@@ -209,11 +209,17 @@ class Dial(Screen):
                 if c2 == b"[":
                     while True:
                         c3 = rd()
-                        if c3 == b"A":
+                        if c3 == b"A": # Up
                             self["value"] = self["value"] + self.inc
                             break
                         elif c3 == b"B":
                             self["value"] = self["value"] - self.inc
+                            break
+                        elif c3 == b"D": # Left / Up long click
+                            self["value"] = self["value"] + self.inc * 10
+                            break
+                        elif c3 == b"C": # Right / Down long click
+                            self["value"] = self["value"] - self.inc * 10
                             break
             elif c1 == b"\n" or c1 == b"\r":
                 return self["value"]
