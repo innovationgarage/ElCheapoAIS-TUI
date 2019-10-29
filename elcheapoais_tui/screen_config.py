@@ -20,14 +20,14 @@ class ConfigMenu(screen.Menu):
     def updated_max_message_per_sec(self, value):
         try:
             downsampler = self.tui.dbus_thread.bus.get_object('no.innovationgarage.elcheapoais.config', '/no/innovationgarage/elcheapoais/downsampler')
-            downsampler.Set("no.innovationgarage.elcheapoais.downsampler", "max_message_per_sec", value)
+            downsampler.Set("no.innovationgarage.elcheapoais.downsampler", "max_message_per_sec", value, dbus_interface='org.freedesktop.DBus.Properties')
         except Exception as e:
             print(e)
 
     def updated_max_message_per_mmsi_per_sec(self, value):
         try:
             downsampler = self.tui.dbus_thread.bus.get_object('no.innovationgarage.elcheapoais.config', '/no/innovationgarage/elcheapoais/downsampler')
-            downsampler.Set("no.innovationgarage.elcheapoais.downsampler", "max_message_per_mmsi_per_sec", value)
+            downsampler.Set("no.innovationgarage.elcheapoais.downsampler", "max_message_per_mmsi_per_sec", value, dbus_interface='org.freedesktop.DBus.Properties')
         except Exception as e:
             print(e)
         
