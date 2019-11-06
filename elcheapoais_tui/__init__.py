@@ -66,6 +66,7 @@ class TUI(object):
         self.main_screen = screen_main.MainScreen(self)
 
         self.config_screen = screen_config.ConfigMenu(self)
+        self.save_status_screen = screen_config.SaveStatusScreen(self)
         self.msgs_min_screen = screen_config.MsgsMinScreen(self)
         self.msgs_min_mmsi_screen = screen_config.MsgsMinMmsiScreen(self)
         self.wifi_screen = screen_wifi.WifiScreen(self)

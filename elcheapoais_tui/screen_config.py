@@ -9,6 +9,7 @@ class ConfigMenu(screen.Menu):
             "Msgs/min:",
             "Msgs/min/mmsi:",
             "Wifi",
+            "Save settings"
         ], max_message_per_sec = 0.1, max_message_per_mmsi_per_sec=0.1)
 
     def display_max_message_per_sec(self, value):
@@ -41,6 +42,20 @@ class ConfigMenu(screen.Menu):
         return self.tui.msgs_min_mmsi_screen
     def action_3(self):
         return self.tui.wifi_screen
+    def action_4(self):
+        status = os.system("rsync -a --progress /etc/ /run/etc/")
+        if status == 0:
+            status = os.system("overlayroot-chroot rsync -a --verbose --dry-run --exclude fstab /run/etc/ /etc/")
+        if status == 0:
+            self.tui.save_status_screen.content = "Configuration successfully saved"
+        else:
+            self.tui.save_status_screen.content = "Something went wrong!"
+        return self.tui.save_status_screen
+
+class SaveStatusScreen(DisplayScreen):
+    def __init__(self, tui):
+        self.tui = tui
+        screen.DisplayScreen.__init__(self, "")
     
 class MsgsMinScreen(screen.Dial):
     def __init__(self, tui):
