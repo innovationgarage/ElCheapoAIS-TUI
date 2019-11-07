@@ -45,7 +45,7 @@ class ConfigMenu(screen.Menu):
     def action_4(self):
         status = os.system("rsync -a --progress /etc/ /run/etc/")
         if status == 0:
-            status = os.system("overlayroot-chroot rsync -a --verbose --dry-run --exclude fstab /run/etc/ /etc/")
+            status = os.system("overlayroot-chroot rsync -a --verbose --exclude fstab /run/etc/ /etc/")
         if status == 0:
             self.tui.save_status_screen.content = "Configuration successfully saved"
         else:
