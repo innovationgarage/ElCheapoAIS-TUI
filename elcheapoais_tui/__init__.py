@@ -34,8 +34,11 @@ class ScreenThread(threading.Thread):
         threading.Thread.__init__(self)
     def run(self):
         while self.tui.current:
-            self.tui.current = self.tui.current.run()
-            print("XXXXXXXXXXXXX", self.tui.current)
+            try:
+                self.tui.current = self.tui.current.run()
+            except Exception as e:
+                dbg("Error in %s: %s" % (self.tui.current, e))
+                self.tui.current = self.tui.main_screen
 
 class StatusThread(threading.Thread):
     def __init__(self, tui):

@@ -1,5 +1,6 @@
 from . import screen
 from .utils import strw
+import os
 
 class ConfigMenu(screen.Menu):
     def __init__(self, tui):
@@ -52,7 +53,7 @@ class ConfigMenu(screen.Menu):
             self.tui.save_status_screen.content = "Something went wrong!"
         return self.tui.save_status_screen
 
-class SaveStatusScreen(DisplayScreen):
+class SaveStatusScreen(screen.DisplayScreen):
     def __init__(self, tui):
         self.tui = tui
         screen.DisplayScreen.__init__(self, "")
